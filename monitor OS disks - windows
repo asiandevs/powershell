@@ -1,0 +1,37 @@
+# Get Host Name
+$hostname = $env:COMPUTERNAME
+
+# Get all fixed drives
+$drives = Get-WmiObject Win32_LogicalDisk -Filter "DriveType=3"
+
+# Initialize totals
+$totalSize = 0
+$totalFree = 0
+
+# Create report
+$report = $drives | ForEach-Object {
+    $totalSize += $_.Size
+    $totalFree += $_.FreeSpace
+
+    [PSCustomObject]@{
+        "Host Name"     = $hostname
+        "Disk Drive"    = $_.DeviceID
+        "Capacity (GB)" = "{0:N2}" -f ($_.Size / 1GB)
+        "Used (GB)"     = "{0:N2}" -f (($_.Size - $_.FreeSpace) / 1GB)
+        "Free (GB)"     = "{0:N2}" -f ($_.FreeSpace / 1GB)
+        "Usage (%)"     = "{0:N2}" -f ((($_.Size - $_.FreeSpace) / $_.Size) * 100)
+    }
+}
+
+# Add summary row
+$summary = [PSCustomObject]@{
+    "Host Name"     = $hostname
+    "Disk Drive"    = "Total"
+    "Capacity (GB)" = "{0:N2}" -f ($totalSize / 1GB)
+    "Used (GB)"     = "{0:N2}" -f (($totalSize - $totalFree) / 1GB)
+    "Free (GB)"     = "{0:N2}" -f ($totalFree / 1GB)
+    "Usage (%)"     = "{0:N2}" -f ((($totalSize - $totalFree) / $totalSize) * 100)
+}
+
+# Combine and display
+$report + $summary | Format-Table -AutoSize
